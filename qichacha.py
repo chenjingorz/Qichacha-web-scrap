@@ -1,25 +1,29 @@
+# names with 100% on qichacha are stored in SQL, else stored in csv 'unmatched entities' for manual search
+
 import pandas as pd
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.keys import Keys
 from selenium.common.exceptions import NoSuchElementException
 import pyodbc
+from time import sleep
 
+# import the excel file with entities
 entity = pd.read_excel('C:\Work Data (Keppel ABC Audit)\PYTHON PROJECT\QICHACHA\entity.xlsx')
 
-connection = pyodbc.connect('Driver={SQL Server Native Client 11.0};Server=SGKCLNB18030528;Database=Entity;Trusted_Connection=yes;')
+connection = pyodbc.connect('Driver={SQL Server Native Client 11.0};Server=SGKCLNB18030528;Database=Entity1;Trusted_Connection=yes;')
 cursor = connection.cursor()
 
-# run in browser mode if u want to see whats happening
-driver = webdriver.Chrome('C:/Program Files/Java/chromedriver.exe')
-driver.get('https://www.qichacha.com/')
-
-# run in headless mode for faster execution
-# chrome_options = Options()
-# chrome_options.add_argument("--headless")
-# chrome_options.binary_location = 'C:/Users/jing.chen/AppData/Local/Google/Chrome SxS/Application/chrome.exe'
-# driver = webdriver.Chrome('C:/Program Files/Java/chromedriver.exe', chrome_options=chrome_options)
+# run in BROWSER MODE if u want to see whats happening
+# driver = webdriver.Chrome('C:/Program Files/Java/chromedriver.exe')
 # driver.get('https://www.qichacha.com/')
+
+# run in headless mode for faster execution, need to download google canary
+chrome_options = Options()
+chrome_options.add_argument("--headless")
+chrome_options.add_argument("--window-size=1920x1080")
+driver = webdriver.Chrome('C:/Program Files/Java/chromedriver.exe', chrome_options=chrome_options)
+driver.get('https://www.qichacha.com/')
 
 # open with encoding so that when u write no need encoding
 f = open('Unmatched entities.csv','w', encoding = 'utf-8-sig')
@@ -35,8 +39,10 @@ user = driver.find_element_by_xpath('//*[@id="u"]').send_keys('953726816')
 pw = driver.find_element_by_xpath('//*[@id="p"]').send_keys('KepCorp@123')
 login = driver.find_element_by_xpath('//*[@id="login_button"]').click()
 
+sleep(5)
+
 for i in range(entity.shape[0]):
-    # for i in range (3):
+# for i in range (1):
     if i != 0:
         newSearch = driver.find_element_by_xpath('//*[@id="headerKey"]')
         for k in range(len(key)):
@@ -75,13 +81,11 @@ for i in range(entity.shape[0]):
         # use assigned variableName.find instead of driver.find to find the element under that variable
         try:
             mainMember = driver.find_element_by_id('Mainmember')
-            # name and position list
             mainName = mainMember.find_elements_by_xpath(
                 './/a[@class = "c_a"]')  # .// current processing starts at the current node
             mainPosition = mainMember.find_elements_by_xpath('.//td[@class = "text-center"]')
             memberNo = mainMember.find_element_by_xpath('//*[@id="Mainmember"]/div/span[1]').text
             for j in range(int(memberNo)):
-                # store into SQL
                 command = "insert into MainMembers(CompanyName, MainMember, Position) values (N'" + key + "', N'" + \
                           mainName[j].text + "', N'" + mainPosition[j].text + "')"
                 cursor.execute(command)
@@ -90,7 +94,6 @@ for i in range(entity.shape[0]):
 
         try:
             stockInfo = driver.find_element_by_id('Sockinfo')
-            # stockholder list
             stockHolders = stockInfo.find_elements_by_xpath('.//a[not(@class ="btn-touzi")]')
             stockNo = stockInfo.find_element_by_xpath('//*[@id="Sockinfo"]/div/span[1]').text
             for j in range(int(stockNo)):
